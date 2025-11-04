@@ -4,18 +4,24 @@ import 'utils/constants.dart';
 import 'widgets/bottom_navbar.dart';
 import 'services/notification_service.dart';
 import 'services/db_service.dart';
+import 'services/auth_service.dart';
+import 'views/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await NotificationService().init();
-  await DBService.instance.resetDatabase();
+  await DBService.instance.database;
 
-  runApp(const MoodToMatchaApp());
+  final auth = AuthService.instance;
+  final autoLogin = await auth.tryAutoLogin();
+
+  runApp(MoodToMatchaApp(startAtHome: autoLogin));
 }
 
 class MoodToMatchaApp extends StatelessWidget {
-  const MoodToMatchaApp({super.key});
+  final bool startAtHome;
+  const MoodToMatchaApp({super.key, required this.startAtHome});
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +37,17 @@ class MoodToMatchaApp extends StatelessWidget {
           backgroundColor: Colors.transparent,
           foregroundColor: kTextColor,
         ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kPrimaryColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            minimumSize: const Size(double.infinity, 48),
+          ),
+        ),
       ),
-      home: const BottomNavbar(),
+      home: startAtHome ? const BottomNavbar() : const LoginPage(),
     );
   }
 }

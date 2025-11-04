@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../utils/constants.dart';
-import 'register_page.dart';
 import '../widgets/bottom_navbar.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,27 +13,54 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _id = TextEditingController();
-  final _password = TextEditingController();
+  final _idController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _loading = false;
+  final _formKey = GlobalKey<FormState>();
 
   Future<void> _login() async {
-    setState(() => _loading = true);
-    final success = await AuthService.instance.login(
-      _id.text.trim(),
-      _password.text.trim(),
-    );
-    setState(() => _loading = false);
+    if (!_formKey.currentState!.validate()) return;
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const BottomNavbar()),
+    setState(() => _loading = true);
+
+    final id = _idController.text.trim();
+    final password = _passwordController.text.trim();
+
+    try {
+      final success = await AuthService.instance.login(id, password);
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Berhasil masuk 🍵'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const BottomNavbar()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ID atau Password salah ❌'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('ID atau password salah')));
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
@@ -41,68 +68,106 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: kPrimaryColor,
+        centerTitle: true,
+        title: Text(
+          "Masuk ke Akun",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Mood To Matcha 🍵',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: kPrimaryColor,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Mood to Matcha",
+                style: GoogleFonts.poppins(
+                  color: kPrimaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            _field(_id, 'ID', Icons.badge),
-            _field(_password, 'Password', Icons.lock, obscure: true),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _loading ? null : _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
-                minimumSize: const Size.fromHeight(45),
+              const SizedBox(height: 30),
+              _inputField(
+                controller: _idController,
+                label: "ID Pengguna",
+                icon: Icons.badge_outlined,
               ),
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(
-                      'Login',
-                      style: GoogleFonts.poppins(color: Colors.white),
-                    ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const RegisterPage()),
+              _inputField(
+                controller: _passwordController,
+                label: "Password",
+                icon: Icons.lock_outline,
+                obscure: true,
               ),
-              child: const Text('Belum punya akun? Daftar dulu'),
-            ),
-          ],
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: _loading ? null : _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryColor,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        "Masuk",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterPage()),
+                  );
+                },
+                child: Text(
+                  "Belum punya akun? Daftar",
+                  style: GoogleFonts.poppins(color: kPrimaryColor),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _field(
-    TextEditingController c,
-    String label,
-    IconData icon, {
+  Widget _inputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
     bool obscure = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        controller: c,
+      child: TextFormField(
+        controller: controller,
         obscureText: obscure,
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: kPrimaryColor),
           hintText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           filled: true,
           fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
         ),
+        validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
       ),
     );
   }

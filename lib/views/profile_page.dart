@@ -38,17 +38,21 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _saveProfile() async {
     if (_user == null) return;
     setState(() => _saving = true);
+
     await _auth.updateProfile(
-      userId: _user!['id'].toString(),
+      userId: _user!['user_id'] ?? _user!['id'].toString(),
       name: _nameC.text.trim(),
       email: _emailC.text.trim(),
     );
+
     await _loadUser();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profil berhasil diperbarui ✅')),
       );
     }
+
     setState(() => _saving = false);
   }
 
@@ -73,22 +77,25 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
         backgroundColor: kPrimaryColor,
+        elevation: 0,
+        centerTitle: true,
         title: Text(
-          "Profil",
+          "Profil 🍃",
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
             CircleAvatar(
               radius: 65,
+              backgroundColor: Colors.green.shade100,
               backgroundImage: const AssetImage(
                 'assets/images/nelaprofile.png',
               ),
@@ -110,70 +117,98 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 30),
-            TextField(
+            _buildTextField(
               controller: _nameC,
-              decoration: InputDecoration(
-                labelText: "Nama Lengkap",
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              label: "Nama Lengkap",
+              icon: Icons.person_outline,
             ),
             const SizedBox(height: 16),
-            TextField(
+            _buildTextField(
               controller: _emailC,
-              decoration: InputDecoration(
-                labelText: "Email",
-                prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              label: "Email",
+              icon: Icons.email_outlined,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _saving ? null : _saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.save_alt, color: Colors.white),
-              label: Text(
-                _saving ? "Menyimpan..." : "Simpan Perubahan",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout, color: Colors.white),
-              label: const Text("Logout"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade400,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
+            const SizedBox(height: 30),
+            _buildSaveButton(),
+            const SizedBox(height: 14),
+            _buildLogoutButton(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      style: GoogleFonts.poppins(fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.poppins(color: kTextColor, fontSize: 14),
+        prefixIcon: Icon(icon, color: kPrimaryColor),
+        filled: true,
+        fillColor: Colors.green.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: kPrimaryColor, width: 1),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return ElevatedButton.icon(
+      onPressed: _saving ? null : _saveProfile,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: kPrimaryColor,
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shadowColor: Colors.green.shade200,
+        elevation: 3,
+      ),
+      icon: _saving
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : const Icon(Icons.save_alt, color: Colors.white),
+      label: Text(
+        _saving ? "Menyimpan..." : "Simpan Perubahan 🍵",
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return ElevatedButton.icon(
+      onPressed: _logout,
+      icon: const Icon(Icons.logout, color: Colors.white),
+      label: Text(
+        "Keluar",
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red.shade400,
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }

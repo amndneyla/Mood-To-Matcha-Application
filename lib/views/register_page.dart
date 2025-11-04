@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/db_service.dart';
 import '../utils/constants.dart';
 import 'login_page.dart';
 
@@ -13,35 +13,54 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+
   final _id = TextEditingController();
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+
   bool _loading = false;
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
+
     try {
-      await AuthService.instance.register(
-        id: _id.text.trim(),
-        name: _name.text.trim(),
-        email: _email.text.trim(),
-        password: _password.text.trim(),
+      // ✅ FIX nama variabel sesuai dengan controller yang ada
+      final success = await DBService.instance.registerUser(
+        _id.text.trim(),
+        _name.text.trim(),
+        _email.text.trim(),
+        _password.text.trim(),
       );
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registrasi berhasil! Silakan login 🍵'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ID sudah digunakan ❌'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     } finally {
       setState(() => _loading = false);
     }
@@ -52,8 +71,12 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: Text('Daftar Akun', style: GoogleFonts.poppins()),
+        title: Text(
+          'Daftar Akun',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: kPrimaryColor,
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -61,7 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
           key: _formKey,
           child: Column(
             children: [
-              _field(_id, 'ID', Icons.badge),
+              _field(_id, 'ID Pengguna', Icons.badge),
               _field(_name, 'Nama Lengkap', Icons.person),
               _field(_email, 'Email', Icons.email),
               _field(_password, 'Password', Icons.lock, obscure: true),
@@ -71,12 +94,18 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   minimumSize: const Size.fromHeight(45),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: _loading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        'Daftar',
-                        style: GoogleFonts.poppins(color: Colors.white),
+                        'Daftar Sekarang',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
               ),
               const SizedBox(height: 20),
@@ -85,7 +114,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   context,
                   MaterialPageRoute(builder: (_) => const LoginPage()),
                 ),
-                child: const Text('Sudah punya akun? Login'),
+                child: Text(
+                  'Sudah punya akun? Login',
+                  style: GoogleFonts.poppins(color: kPrimaryColor),
+                ),
               ),
             ],
           ),

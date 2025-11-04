@@ -1,10 +1,7 @@
 import 'package:intl/intl.dart';
 
 class CurrencyUtils {
-  /// 💰 Konversi USD ke IDR (rate statis, bisa kamu ganti nanti)
   static double usdToIdr(double usd) => usd * 16000;
-
-  /// 💵 Konversi dari IDR ke mata uang lain
   static double convertFromIdr(double idr, String currency) {
     switch (currency) {
       case "USD":
@@ -16,7 +13,6 @@ class CurrencyUtils {
     }
   }
 
-  /// 🪙 Simbol mata uang
   static String symbol(String code) {
     switch (code) {
       case "USD":
@@ -28,7 +24,6 @@ class CurrencyUtils {
     }
   }
 
-  /// 📊 Format sesuai locale
   static String format(double amount, String code) {
     switch (code) {
       case "USD":
@@ -53,7 +48,6 @@ class CurrencyUtils {
     }
   }
 
-  /// 🇮🇩 Format khusus untuk Rupiah
   static String formatIdr(double idr) {
     final formatter = NumberFormat.currency(
       locale: "id_ID",

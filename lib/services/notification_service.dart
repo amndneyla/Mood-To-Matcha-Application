@@ -29,8 +29,8 @@ class NotificationService {
 
     await _plugin.show(
       0,
-      '🍵 Matcha Siap!',
-      'Pesanan $drinkName kamu sedang disiapkan 💚',
+      '🍵 Matchanya Siap Nih!',
+      'Pesanan $drinkName kamu sedang disiapkan yaw💚',
       details,
     );
   }

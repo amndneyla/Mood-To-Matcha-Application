@@ -53,7 +53,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadUser() async {
-    // ambil user login aktif dari AuthService
     final user = await AuthService.instance.getCurrentUser();
     final u = await db.getUserStats();
 
@@ -149,7 +148,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// ✅ Pindah ke lokasi GPS & update kota
   Future<void> _goToMyLocation() async {
     try {
       bool enabled = await Geolocator.isLocationServiceEnabled();
@@ -205,7 +203,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // HEADER ===========================================================
   Widget _header() {
     return Container(
       decoration: const BoxDecoration(
@@ -242,7 +239,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-          // KARTU INFORMASI
           Container(
             margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
@@ -322,7 +318,6 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
 
-          // PENCARIAN
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -355,7 +350,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // MAP ===============================================================
   Widget _mapSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -424,44 +418,51 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+
             Positioned(
               bottom: 10,
               left: 10,
               right: 10,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: _saveLocation,
-                    icon: const Icon(Icons.save, color: Colors.white, size: 18),
-                    label: const Text("Simpan Lokasi"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton.icon(
+                      onPressed: _saveLocation,
+                      icon: const Icon(
+                        Icons.save,
+                        color: Colors.white,
+                        size: 18,
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                      label: const Text("Simpan Lokasi"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 97, 138, 85),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: _goToMyLocation,
-                    icon: const Icon(
-                      Icons.my_location,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    label: const Text("My Location"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton.icon(
+                      onPressed: _goToMyLocation,
+                      icon: const Icon(
+                        Icons.my_location,
+                        color: Colors.white,
+                        size: 18,
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                      label: const Text("My Location"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 97, 138, 85),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
@@ -474,7 +475,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // FILTER MOOD =======================================================
   Widget _moodFilter() {
     final moods = ["All Mood", "Ceria", "Tenang", "Fokus", "Dingin", "Hangat"];
     return SizedBox(
@@ -513,7 +513,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // GRID ==============================================================
   Widget _gridDrinks() {
     if (_loading) {
       return const SliverFillRemaining(
@@ -637,7 +636,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // BUILD =============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(

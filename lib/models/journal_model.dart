@@ -2,17 +2,29 @@ class JournalEntry {
   final int? id;
   final String title;
   final String note;
-  final String createdAt; // ISO8601 UTC
+
+  final String createdAt;
+  final String createdLocal;
+  final String zone;
 
   JournalEntry({
     this.id,
     required this.title,
     required this.note,
     required this.createdAt,
+    required this.createdLocal,
+    required this.zone,
   });
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'title': title, 'note': note, 'created_at': createdAt};
+    return {
+      'id': id,
+      'title': title,
+      'note': note,
+      'created_at': createdAt,
+      'created_local': createdLocal,
+      'zone': zone,
+    };
   }
 
   factory JournalEntry.fromMap(Map<String, dynamic> map) {
@@ -23,6 +35,9 @@ class JournalEntry {
       createdAt:
           (map['created_at'] as String?) ??
           DateTime.now().toUtc().toIso8601String(),
+      createdLocal:
+          (map['created_local'] as String?) ?? DateTime.now().toIso8601String(),
+      zone: (map['zone'] as String?) ?? 'WIB',
     );
   }
 }

@@ -22,7 +22,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 6,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -32,13 +32,14 @@ class DBService {
     await db.execute('''
       CREATE TABLE users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
+        user_id TEXT UNIQUE,
         name TEXT,
         email TEXT,
         password TEXT,
         photo TEXT,
         points INTEGER DEFAULT 0,
-        balance INTEGER DEFAULT 0
+        balance INTEGER DEFAULT 0,
+        is_logged_in INTEGER DEFAULT 0
       )
     ''');
 
@@ -59,7 +60,9 @@ class DBService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         note TEXT,
-        created_at TEXT
+        created_at TEXT,
+        created_local TEXT,
+        zone TEXT
       )
     ''');
 
@@ -71,6 +74,7 @@ class DBService {
       'photo': '',
       'points': 0,
       'balance': 100000,
+      'is_logged_in': 0,
     });
   }
 
@@ -81,12 +85,26 @@ class DBService {
       await db.execute('ALTER TABLE users ADD COLUMN email TEXT');
       await db.execute('ALTER TABLE users ADD COLUMN password TEXT');
     }
-  }
-
-  Future<Map<String, dynamic>?> getUserById(String id) async {
-    final db = await database;
-    final res = await db.query('users', where: 'user_id = ?', whereArgs: [id]);
-    return res.isNotEmpty ? res.first : null;
+    if (oldV < 7) {
+      try {
+        await db.execute('ALTER TABLE journals ADD COLUMN created_local TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE journals ADD COLUMN zone TEXT');
+      } catch (_) {}
+    }
+    if (oldV < 8) {
+      await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_id ON users(user_id)',
+      );
+    }
+    if (oldV < 9) {
+      try {
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN is_logged_in INTEGER DEFAULT 0',
+        );
+      } catch (_) {}
+    }
   }
 
   Future<Map<String, dynamic>?> login(String id, String password) async {
@@ -97,6 +115,35 @@ class DBService {
       where: 'user_id = ? AND password = ?',
       whereArgs: [id, hash],
     );
+
+    if (res.isEmpty) return null;
+
+    await db.update('users', {'is_logged_in': 0});
+
+    await db.update(
+      'users',
+      {'is_logged_in': 1},
+      where: 'user_id = ?',
+      whereArgs: [id],
+    );
+
+    return res.first;
+  }
+
+  Future<Map<String, dynamic>?> getLoggedInUser() async {
+    final db = await database;
+    final res = await db.query('users', where: 'is_logged_in = 1');
+    return res.isNotEmpty ? res.first : null;
+  }
+
+  Future<void> logout() async {
+    final db = await database;
+    await db.update('users', {'is_logged_in': 0});
+  }
+
+  Future<Map<String, dynamic>?> getUserById(String id) async {
+    final db = await database;
+    final res = await db.query('users', where: 'user_id = ?', whereArgs: [id]);
     return res.isNotEmpty ? res.first : null;
   }
 
@@ -113,6 +160,7 @@ class DBService {
       whereArgs: [id],
     );
     if (existing.isNotEmpty) return false;
+
     await db.insert('users', {
       'user_id': id,
       'name': name,
@@ -120,7 +168,8 @@ class DBService {
       'password': _hashPassword(password),
       'photo': '',
       'points': 0,
-      'balance': 100000,
+      'balance': 0,
+      'is_logged_in': 0,
     });
     return true;
   }
@@ -151,12 +200,13 @@ class DBService {
         'password': _hashPassword('matcha'),
         'photo': '',
         'points': 0,
-        'balance': 100000,
+        'balance': 0,
+        'is_logged_in': 0,
       });
       return {
         'name': 'Matcha Lover',
         'points': 0,
-        'balance': 100000,
+        'balance': 0,
         'email': 'default@matcha.com',
       };
     }
@@ -234,14 +284,37 @@ class DBService {
 
   Future<int> addJournal(JournalEntry j) async {
     final db = await database;
-    final id = await db.insert('journals', j.toMap());
-    await addPoints(10);
+
+    try {
+      Future.microtask(() async {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS journals(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            note TEXT,
+            created_at TEXT,
+            created_local TEXT,
+            zone TEXT
+          )
+        ''');
+      });
+    } catch (_) {}
+
+    int id = await db.insert('journals', {
+      'title': j.title,
+      'note': j.note,
+      'created_at': j.createdAt,
+      'created_local': j.createdLocal,
+      'zone': j.zone,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    print("✅ Berhasil simpan jurnal dengan ID: $id");
     return id;
   }
 
   Future<List<JournalEntry>> getAllJournals() async {
     final db = await database;
-    final result = await db.query('journals', orderBy: 'created_at DESC');
+    final result = await db.query('journals', orderBy: 'created_local DESC');
     return result.map((e) => JournalEntry.fromMap(e)).toList();
   }
 
@@ -249,14 +322,14 @@ class DBService {
     final db = await database;
     final startLocal = DateTime(dayLocal.year, dayLocal.month, dayLocal.day);
     final endLocal = startLocal.add(const Duration(days: 1));
-    final startUtc = startLocal.toUtc().toIso8601String();
-    final endUtc = endLocal.toUtc().toIso8601String();
+
     final result = await db.query(
       'journals',
-      where: 'created_at >= ? AND created_at < ?',
-      whereArgs: [startUtc, endUtc],
-      orderBy: 'created_at DESC',
+      where: 'created_local >= ? AND created_local < ?',
+      whereArgs: [startLocal.toIso8601String(), endLocal.toIso8601String()],
+      orderBy: 'created_local DESC',
     );
+
     return result.map((e) => JournalEntry.fromMap(e)).toList();
   }
 

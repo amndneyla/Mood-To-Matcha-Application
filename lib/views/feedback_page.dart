@@ -89,7 +89,6 @@ class FeedbackPage extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // 🌸 Footer quote
             Text(
               "“Setiap baris kode adalah secangkir matcha — tenang, fokus, dan penuh makna.” 🍵",
               textAlign: TextAlign.center,

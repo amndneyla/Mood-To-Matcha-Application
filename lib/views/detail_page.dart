@@ -92,7 +92,6 @@ class _DetailPageState extends State<DetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📸 Gambar minuman
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
               child: Image.network(
@@ -110,7 +109,6 @@ class _DetailPageState extends State<DetailPage> {
             ),
             const SizedBox(height: 20),
 
-            // 🍵 Nama dan harga
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -135,8 +133,6 @@ class _DetailPageState extends State<DetailPage> {
               ],
             ),
             const SizedBox(height: 8),
-
-            // 🌿 Detail singkat
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -149,7 +145,6 @@ class _DetailPageState extends State<DetailPage> {
 
             const SizedBox(height: 20),
 
-            // 📖 Deskripsi
             Text(
               "Deskripsi",
               style: GoogleFonts.poppins(
@@ -170,7 +165,6 @@ class _DetailPageState extends State<DetailPage> {
             ),
             const SizedBox(height: 30),
 
-            // 🛒 Tombol beli
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -204,7 +198,6 @@ class _DetailPageState extends State<DetailPage> {
             ),
             const SizedBox(height: 20),
 
-            // 💰 Info user
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

@@ -1,9 +1,8 @@
 import 'package:intl/intl.dart';
 
 class TimeUtils {
-  /// Konversi waktu sekarang ke zona tertentu
   static String nowWithZone(String zone) {
-    final now = DateTime.now().toUtc(); // mulai dari UTC
+    final now = DateTime.now().toUtc();
     late Duration offset;
 
     switch (zone) {
@@ -20,14 +19,13 @@ class TimeUtils {
         offset = const Duration(hours: 0);
         break;
       default:
-        offset = const Duration(hours: 7); // default WIB
+        offset = const Duration(hours: 7);
     }
 
     final zonedTime = now.add(offset);
     return zonedTime.toIso8601String();
   }
 
-  /// Untuk menampilkan waktu (readable) sesuai zona
   static String formatWithZone(DateTime date, String zone) {
     final nowUtc = date.toUtc();
     late Duration offset;

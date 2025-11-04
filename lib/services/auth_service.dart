@@ -1,120 +1,58 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../services/db_service.dart';
 
 class AuthService {
   static final AuthService instance = AuthService._init();
-  static Database? _db;
   String? _currentUserId;
 
   AuthService._init();
 
-  Future<Database> get database async {
-    if (_db != null) return _db!;
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'matchapay.db');
-    _db = await openDatabase(path, version: 6);
-    return _db!;
-  }
-
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  /// REGISTER USER BARU
-  Future<void> register({
-    required String id,
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    final db = await database;
-
-    final existing = await db.query(
-      'users',
-      where: 'user_id = ?',
-      whereArgs: [id],
-    );
-
-    if (existing.isNotEmpty) {
-      throw Exception('ID sudah digunakan.');
-    }
-
-    final hashed = _hashPassword(password);
-
-    await db.insert('users', {
-      'user_id': id,
-      'name': name,
-      'email': email,
-      'password': hashed,
-      'photo': '',
-      'points': 0,
-      'balance': 100000,
-    });
-  }
-
-  /// LOGIN USER
   Future<bool> login(String id, String password) async {
-    final db = await database;
-
-    final result = await db.query(
-      'users',
-      where: 'user_id = ?',
-      whereArgs: [id],
-    );
-
-    if (result.isEmpty) return false;
-
-    final user = result.first;
-    final hashed = _hashPassword(password);
-
-    if (user['password'] == hashed) {
-      _currentUserId = user['user_id']?.toString();
+    final db = DBService.instance;
+    final user = await db.login(id, password);
+    if (user != null) {
+      _currentUserId = user['user_id'].toString();
       return true;
     }
-
     return false;
   }
 
-  /// MENDAPATKAN DATA USER SAAT INI
   Future<Map<String, dynamic>?> getCurrentUser() async {
-    if (_currentUserId == null) return null;
-    final db = await database;
-
-    final result = await db.query(
-      'users',
-      where: 'user_id = ?',
-      whereArgs: [_currentUserId],
-    );
-
-    return result.isNotEmpty ? result.first : null;
+    final db = DBService.instance;
+    final user = await db.getLoggedInUser();
+    if (user != null) {
+      _currentUserId = user['user_id'];
+      return user;
+    }
+    return null;
   }
 
-  /// UPDATE PROFIL (nama, email, foto)
   Future<void> updateProfile({
     required String userId,
     required String name,
     required String email,
     String? photo,
   }) async {
-    final db = await database;
-
-    await db.update(
-      'users',
-      {'name': name, 'email': email, 'photo': photo ?? ''},
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
+    final db = DBService.instance;
+    await db.updateUserProfile(userId, name, email, photo);
   }
 
-  /// LOGOUT USER
-  void logout() {
+  Future<bool> tryAutoLogin() async {
+    final db = DBService.instance;
+    final user = await db.getLoggedInUser();
+    if (user != null) {
+      _currentUserId = user['user_id'];
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> logout() async {
+    final db = DBService.instance;
+    await db.logout();
     _currentUserId = null;
   }
 
-  /// CEK LOGIN
   bool isLoggedIn() => _currentUserId != null;
 }
