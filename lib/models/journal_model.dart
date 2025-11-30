@@ -2,10 +2,10 @@ class JournalEntry {
   final int? id;
   final String title;
   final String note;
-
   final String createdAt;
   final String createdLocal;
   final String zone;
+  final String userId;
 
   JournalEntry({
     this.id,
@@ -14,6 +14,7 @@ class JournalEntry {
     required this.createdAt,
     required this.createdLocal,
     required this.zone,
+    required this.userId,
   });
 
   Map<String, dynamic> toMap() {
@@ -24,6 +25,7 @@ class JournalEntry {
       'created_at': createdAt,
       'created_local': createdLocal,
       'zone': zone,
+      'user_id': userId,
     };
   }
 
@@ -38,6 +40,7 @@ class JournalEntry {
       createdLocal:
           (map['created_local'] as String?) ?? DateTime.now().toIso8601String(),
       zone: (map['zone'] as String?) ?? 'WIB',
+      userId: (map['user_id'] as String?) ?? '',
     );
   }
 }

@@ -42,8 +42,6 @@ class _JournalPageState extends State<JournalPage> {
       case 'London':
         now = now.subtract(const Duration(hours: 7));
         break;
-      default:
-        break;
     }
     final formattedTime = DateFormat('HH:mm').format(now);
     setState(() {
@@ -74,12 +72,14 @@ class _JournalPageState extends State<JournalPage> {
       localNow.second,
     );
 
+    final currentUser = await DBService.instance.getLoggedInUser();
     final entry = JournalEntry(
       title: 'Mood ${DateFormat('dd MMM yyyy').format(selectedDate)}',
       note: _noteController.text.trim(),
       createdAt: selectedDate.toUtc().toIso8601String(),
       createdLocal: selectedDate.toIso8601String(),
       zone: _selectedZone,
+      userId: currentUser?['user_id'],
     );
 
     unawaited(DBService.instance.addJournal(entry));
@@ -102,7 +102,7 @@ class _JournalPageState extends State<JournalPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mood Journal'),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: const Color.fromARGB(255, 73, 128, 76),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -135,6 +135,7 @@ class _JournalPageState extends State<JournalPage> {
                 ),
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -155,9 +156,7 @@ class _JournalPageState extends State<JournalPage> {
                     ],
                     onChanged: (v) {
                       if (v == null) return;
-                      setState(() {
-                        _selectedZone = v;
-                      });
+                      setState(() => _selectedZone = v);
                       _updateTime();
                     },
                     decoration: InputDecoration(
@@ -170,8 +169,10 @@ class _JournalPageState extends State<JournalPage> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 8),
                   Text(_displayTime),
+
                   const SizedBox(height: 12),
                   TextField(
                     controller: _noteController,
@@ -186,6 +187,7 @@ class _JournalPageState extends State<JournalPage> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -202,7 +204,9 @@ class _JournalPageState extends State<JournalPage> {
                       onPressed: _saveJournal,
                     ),
                   ),
+
                   const SizedBox(height: 20),
+
                   if (_journals.isNotEmpty)
                     Text(
                       'Catatan Hari Ini (${DateFormat('dd MMM yyyy').format(_selectedDay)})',
@@ -211,11 +215,14 @@ class _JournalPageState extends State<JournalPage> {
                         fontSize: 16,
                       ),
                     ),
+
                   const SizedBox(height: 8),
+
                   ..._journals.map((j) {
                     final localTime = DateFormat(
                       'HH:mm',
                     ).format(DateTime.parse(j.createdLocal));
+
                     return Card(
                       elevation: 2,
                       color: Colors.green.shade50,
@@ -223,25 +230,146 @@ class _JournalPageState extends State<JournalPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ListTile(
-                        title: Text(j.title),
-                        subtitle: Text(j.note),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              j.zone,
-                              style: TextStyle(
-                                color: Colors.green.shade800,
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    j.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(j.note),
+                                ],
                               ),
                             ),
-                            Text(
-                              localTime,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
+
+                            const SizedBox(width: 12),
+
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  j.zone,
+                                  style: TextStyle(
+                                    color: Colors.green.shade800,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  localTime,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        backgroundColor: Colors.white,
+                                        title: const Text(
+                                          'Hapus Catatan',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        content: const Text(
+                                          'Yakin mau hapus catatan ini?',
+                                        ),
+                                        actionsAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        actions: [
+                                          OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              side: BorderSide(
+                                                color: Colors.green.shade700,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: Text(
+                                              'Batal',
+                                              style: TextStyle(
+                                                color: Colors.green.shade800,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.green.shade700,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 18,
+                                                    vertical: 10,
+                                                  ),
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text(
+                                              'Hapus',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm == true) {
+                                      await DBService.instance.deleteJournal(
+                                        j.id!,
+                                      );
+                                      await _loadJournals();
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            '🗑️ Catatan berhasil dihapus',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: const Icon(
+                                    Icons.delete,
+                                    color: Colors.redAccent,
+                                    size: 22,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

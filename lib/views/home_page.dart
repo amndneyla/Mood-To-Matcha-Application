@@ -206,7 +206,7 @@ class _HomePageState extends State<HomePage> {
   Widget _header() {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF7CA779),
+        color: Color.fromARGB(255, 122, 181, 118),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 40, 16, 24),
@@ -243,7 +243,7 @@ class _HomePageState extends State<HomePage> {
             margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFDFF4E0),
+              color: const Color.fromARGB(255, 183, 217, 184),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
