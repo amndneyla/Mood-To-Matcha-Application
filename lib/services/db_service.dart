@@ -20,34 +20,12 @@ class DBService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-
-    final db = await openDatabase(
+    return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
-
-    final existing = await db.query('users');
-    if (existing.isEmpty) {
-      await db.insert('users', {
-        'user_id': '0000',
-        'name': 'Matcha Lover',
-        'email': 'default@matcha.com',
-        'password': _hashPassword('matcha'),
-        'photo': '',
-        'points': 0,
-        'balance': 100000,
-        'is_logged_in': 0,
-      });
-    }
-
-    // FIX: Jurnal lama yang belum punya user_id → dianggap milik user default
-    await db.rawUpdate(
-      "UPDATE journals SET user_id = '0000' WHERE user_id IS NULL OR user_id = ''",
-    );
-
-    return db;
   }
 
   Future _createDB(Database db, int version) async {
@@ -73,7 +51,9 @@ class DBService {
         currency TEXT,
         lat REAL,
         long REAL,
-        date TEXT
+        date TEXT,
+        user_id TEXT,
+        image_url TEXT
       )
     ''');
 
@@ -88,6 +68,17 @@ class DBService {
         user_id TEXT
       )
     ''');
+
+    await db.insert('users', {
+      'user_id': '0000',
+      'name': 'Matcha Lover',
+      'email': 'default@matcha.com',
+      'password': _hashPassword('matcha'),
+      'photo': '',
+      'points': 0,
+      'balance': 100000,
+      'is_logged_in': 0,
+    });
   }
 
   Future _onUpgrade(Database db, int oldV, int newV) async {
@@ -117,28 +108,46 @@ class DBService {
         );
       } catch (_) {}
     }
+
+    // ✅ ADDED: Migration untuk versi 11 - Tambah user_id ke tabel
     if (oldV < 11) {
-      await db.execute('ALTER TABLE journals ADD COLUMN user_id TEXT');
+      try {
+        await db.execute('ALTER TABLE orders ADD COLUMN user_id TEXT');
+      } catch (_) {}
+
+      try {
+        await db.execute('ALTER TABLE journals ADD COLUMN user_id TEXT');
+      } catch (_) {}
+
+      // Assign data lama ke user default (0000)
+      await db.update('orders', {'user_id': '0000'});
+      await db.update('journals', {'user_id': '0000'});
+    }
+    if (oldV < 12) {
+      try {
+        await db.execute('ALTER TABLE orders ADD COLUMN image_url TEXT');
+      } catch (_) {}
     }
   }
 
   Future<Map<String, dynamic>?> login(String id, String password) async {
     final db = await database;
-    final hash = _hashPassword(password.trim());
+    final hash = _hashPassword(password);
     final res = await db.query(
       'users',
       where: 'user_id = ? AND password = ?',
-      whereArgs: [id.trim(), hash],
+      whereArgs: [id, hash],
     );
 
     if (res.isEmpty) return null;
 
-    await db.rawUpdate('UPDATE users SET is_logged_in = 0');
+    await db.update('users', {'is_logged_in': 0});
+
     await db.update(
       'users',
       {'is_logged_in': 1},
       where: 'user_id = ?',
-      whereArgs: [id.trim()],
+      whereArgs: [id],
     );
 
     return res.first;
@@ -152,7 +161,7 @@ class DBService {
 
   Future<void> logout() async {
     final db = await database;
-    await db.rawUpdate('UPDATE users SET is_logged_in = 0');
+    await db.update('users', {'is_logged_in': 0});
   }
 
   Future<Map<String, dynamic>?> getUserById(String id) async {
@@ -171,22 +180,20 @@ class DBService {
     final existing = await db.query(
       'users',
       where: 'user_id = ?',
-      whereArgs: [id.trim()],
+      whereArgs: [id],
     );
     if (existing.isNotEmpty) return false;
 
-    final hashedPassword = _hashPassword(password.trim());
     await db.insert('users', {
-      'user_id': id.trim(),
-      'name': name.trim(),
-      'email': email.trim(),
-      'password': hashedPassword,
+      'user_id': id,
+      'name': name,
+      'email': email,
+      'password': _hashPassword(password),
       'photo': '',
       'points': 0,
-      'balance': 0,
+      'balance': 100000,
       'is_logged_in': 0,
     });
-
     return true;
   }
 
@@ -205,55 +212,130 @@ class DBService {
     );
   }
 
+  // ✅ UPDATED: Ambil data user yang sedang login
   Future<Map<String, dynamic>> getUserStats() async {
-    final db = await database;
-    final logged = await db.query('users', where: 'is_logged_in = 1');
+    final user = await getLoggedInUser();
 
-    if (logged.isNotEmpty) return logged.first;
+    if (user == null) {
+      // Jika tidak ada user login, return data default
+      return {
+        'name': 'Matcha Lover',
+        'points': 0,
+        'balance': 0,
+        'email': 'default@matcha.com',
+      };
+    }
 
-    final f = await db.query('users', limit: 1);
-    return f.first;
+    return user;
   }
 
+  // ✅ UPDATED: Tambah poin untuk user yang login
   Future<void> addPoints(int points) async {
     final db = await database;
-    await db.rawUpdate('UPDATE users SET points = points + ?', [points]);
+    final user = await getLoggedInUser();
+
+    if (user == null) return;
+
+    final userId = user['user_id'];
+
+    await db.update(
+      'users',
+      {'points': (user['points'] ?? 0) + points},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
   }
 
+  // ✅ UPDATED: Tambah balance untuk user yang login
   Future<void> addBalance(int amount) async {
     final db = await database;
-    await db.rawUpdate('UPDATE users SET balance = balance + ?', [amount]);
+    final user = await getLoggedInUser();
+
+    if (user == null) return;
+
+    final userId = user['user_id'];
+
+    await db.rawUpdate(
+      'UPDATE users SET balance = balance + ? WHERE user_id = ?',
+      [amount, userId],
+    );
   }
 
+  // ✅ UPDATED: Kurangi balance untuk user yang login
   Future<void> deductBalance(int amount) async {
     final db = await database;
-    await db.rawUpdate('UPDATE users SET balance = balance - ?', [amount]);
+    final user = await getLoggedInUser();
+
+    if (user == null) return;
+
+    final userId = user['user_id'];
+
+    await db.rawUpdate(
+      'UPDATE users SET balance = balance - ? WHERE user_id = ?',
+      [amount, userId],
+    );
   }
 
+  // ✅ UPDATED: Reset poin untuk user yang login
   Future<void> resetPoints() async {
     final db = await database;
-    await db.rawUpdate('UPDATE users SET points = 0');
+    final user = await getLoggedInUser();
+
+    if (user == null) return;
+
+    final userId = user['user_id'];
+
+    await db.update(
+      'users',
+      {'points': 0},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
   }
 
+  // ✅ UPDATED: Konversi poin ke balance untuk user yang login
   Future<void> convertPointsToBalance() async {
-    final u = await getUserStats();
-    final points = (u['points'] ?? 0) as int;
-    if (points <= 0) throw Exception();
-    await addBalance(points * 1000);
-    await resetPoints();
+    final user = await getLoggedInUser();
+
+    if (user == null) {
+      throw Exception('User tidak ditemukan.');
+    }
+
+    final points = (user['points'] ?? 0) as int;
+    if (points <= 0) throw Exception('Belum ada poin untuk dikonversi.');
+
+    final db = await database;
+    final userId = user['user_id'];
+    final currentBalance = (user['balance'] ?? 0) as int;
+
+    await db.update(
+      'users',
+      {'balance': currentBalance + (points * 1000), 'points': 0},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
   }
 
+  // ✅ UPDATED: Update stats untuk user yang login
   Future<void> updateUserStats({double? balance, int? points}) async {
     final db = await database;
-    final u = await getUserStats();
-    final cb = (u['balance'] ?? 0).toDouble();
-    final cp = (u['points'] ?? 0).toInt();
-    await db.update('users', {
-      'balance': balance ?? cb,
-      'points': points ?? cp,
-    });
+    final user = await getLoggedInUser();
+
+    if (user == null) return;
+
+    final userId = user['user_id'];
+    final currentBalance = balance ?? (user['balance'] ?? 0).toDouble();
+    final currentPoints = points ?? (user['points'] ?? 0).toInt();
+
+    await db.update(
+      'users',
+      {'balance': currentBalance.toInt(), 'points': currentPoints},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
   }
 
+  // ✅ UPDATED: Simpan order dengan user_id
   Future<void> addOrder(
     Drink drink,
     int price,
@@ -262,9 +344,21 @@ class DBService {
     double? long,
   }) async {
     final db = await database;
-    final u = await getUserStats();
-    final cb = (u['balance'] ?? 0) as int;
-    if (cb < price) throw Exception();
+
+    // Dapatkan user yang sedang login
+    final user = await getLoggedInUser();
+    if (user == null) {
+      throw Exception('User tidak ditemukan. Silakan login ulang.');
+    }
+
+    final userId = user['user_id'];
+    final currentBalance = (user['balance'] ?? 0) as int;
+
+    if (currentBalance < price) {
+      throw Exception('Saldo tidak cukup untuk membeli matcha ini.');
+    }
+
+    // Simpan order dengan user_id
     await db.insert('orders', {
       'drink_name': drink.name,
       'price': price,
@@ -272,49 +366,121 @@ class DBService {
       'lat': lat,
       'long': long,
       'date': DateTime.now().toUtc().toIso8601String(),
+      'user_id': userId,
+      'image_url': drink.imageUrl,
     });
+
     await addPoints(5);
     await deductBalance(price);
   }
 
+  // ✅ UPDATED: Ambil order milik user yang login
   Future<List<Map<String, dynamic>>> getOrders() async {
     final db = await database;
-    return await db.query('orders', orderBy: 'date DESC');
-  }
 
-  Future<int> addJournal(JournalEntry j) async {
-    final db = await database;
-    return await db.insert(
-      'journals',
-      j.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<List<JournalEntry>> getAllJournals() async {
-    final db = await database;
-    final r = await db.query('journals', orderBy: 'created_local DESC');
-    return r.map((e) => JournalEntry.fromMap(e)).toList();
-  }
-
-  Future<List<JournalEntry>> getJournalsByDate(DateTime d) async {
-    final db = await database;
+    // Filter berdasarkan user yang login
     final user = await getLoggedInUser();
     if (user == null) return [];
 
-    final uid = user['user_id'];
+    final userId = user['user_id'];
 
-    final s = DateTime(d.year, d.month, d.day);
-    final e = s.add(const Duration(days: 1));
+    return await db.query(
+      'orders',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'date DESC',
+    );
+  }
 
-    final r = await db.query(
+  // ✅ UPDATED: Simpan journal dengan user_id
+  Future<int> addJournal(JournalEntry j) async {
+    final db = await database;
+
+    // Dapatkan user yang sedang login
+    final user = await getLoggedInUser();
+    if (user == null) {
+      throw Exception('User tidak ditemukan. Silakan login ulang.');
+    }
+
+    final userId = user['user_id'];
+
+    try {
+      Future.microtask(() async {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS journals(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            note TEXT,
+            created_at TEXT,
+            created_local TEXT,
+            zone TEXT,
+            user_id TEXT
+          )
+        ''');
+      });
+    } catch (_) {}
+
+    int id = await db.insert('journals', {
+      'title': j.title,
+      'note': j.note,
+      'created_at': j.createdAt,
+      'created_local': j.createdLocal,
+      'zone': j.zone,
+      'user_id': userId,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // Tambah poin saat membuat journal
+    await addPoints(10);
+
+    print("✅ Berhasil simpan jurnal dengan ID: $id");
+    return id;
+  }
+
+  // ✅ UPDATED: Ambil semua journal milik user yang login
+  Future<List<JournalEntry>> getAllJournals() async {
+    final db = await database;
+
+    // Filter berdasarkan user yang login
+    final user = await getLoggedInUser();
+    if (user == null) return [];
+
+    final userId = user['user_id'];
+
+    final result = await db.query(
       'journals',
-      where: 'user_id = ? AND created_local >= ? AND created_local < ?',
-      whereArgs: [uid, s.toIso8601String(), e.toIso8601String()],
+      where: 'user_id = ?',
+      whereArgs: [userId],
       orderBy: 'created_local DESC',
     );
 
-    return r.map((e) => JournalEntry.fromMap(e)).toList();
+    return result.map((e) => JournalEntry.fromMap(e)).toList();
+  }
+
+  // ✅ UPDATED: Ambil journal by date milik user yang login
+  Future<List<JournalEntry>> getJournalsByDate(DateTime dayLocal) async {
+    final db = await database;
+
+    // Filter berdasarkan user yang login
+    final user = await getLoggedInUser();
+    if (user == null) return [];
+
+    final userId = user['user_id'];
+
+    final startLocal = DateTime(dayLocal.year, dayLocal.month, dayLocal.day);
+    final endLocal = startLocal.add(const Duration(days: 1));
+
+    final result = await db.query(
+      'journals',
+      where: 'user_id = ? AND created_local >= ? AND created_local < ?',
+      whereArgs: [
+        userId,
+        startLocal.toIso8601String(),
+        endLocal.toIso8601String(),
+      ],
+      orderBy: 'created_local DESC',
+    );
+
+    return result.map((e) => JournalEntry.fromMap(e)).toList();
   }
 
   Future<void> deleteJournal(int id) async {

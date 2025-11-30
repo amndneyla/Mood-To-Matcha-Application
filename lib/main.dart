@@ -6,9 +6,19 @@ import 'services/notification_service.dart';
 import 'services/db_service.dart';
 import 'services/auth_service.dart';
 import 'views/login_page.dart';
+import 'views/order_history_page.dart';
+import 'views/onboarding_page.dart'; //ini
+import 'package:get_storage/get_storage.dart'; //ini
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await GetStorage.init(); //buat onboarding
+  final box = GetStorage(); //ini
+  // box.write(
+  //   'seenOnboarding',
+  //   false,
+  // ); //test onboard, kalo dihapus onboard gabisa ditampilin karena udh pernah. kalo mau cek session ini dihapus dulu
 
   await NotificationService().init();
   await DBService.instance.database;
@@ -16,12 +26,25 @@ void main() async {
   final auth = AuthService.instance;
   final autoLogin = await auth.tryAutoLogin();
 
-  runApp(MoodToMatchaApp(startAtHome: autoLogin));
+  final seenOnboarding = box.read('seenOnboarding') ?? false; //ini
+
+  runApp(
+    MoodToMatchaApp(
+      startAtHome: autoLogin,
+      showOnboarding: !seenOnboarding,
+    ), //ini
+  );
 }
 
 class MoodToMatchaApp extends StatelessWidget {
   final bool startAtHome;
-  const MoodToMatchaApp({super.key, required this.startAtHome});
+  final bool showOnboarding; //ini
+
+  const MoodToMatchaApp({
+    super.key,
+    required this.startAtHome,
+    required this.showOnboarding, //ini
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +70,17 @@ class MoodToMatchaApp extends StatelessWidget {
           ),
         ),
       ),
-      home: startAtHome ? const BottomNavbar() : const LoginPage(),
+
+      // ini
+      routes: {
+        '/login': (_) => const LoginPage(),
+        '/home': (_) => const BottomNavbar(),
+        '/order-history': (_) => const OrderHistoryPage(),
+      },
+
+      home: showOnboarding
+          ? OnboardingScreen() //ini
+          : (startAtHome ? const BottomNavbar() : const LoginPage()),
     );
   }
 }

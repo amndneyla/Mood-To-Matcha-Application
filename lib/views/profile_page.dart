@@ -20,9 +20,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _saving = false;
   bool _loading = true;
 
-  // --- Tambahan untuk foto profil ---
   final ImagePicker _picker = ImagePicker();
-  File? _imageFile; // preview lokal setelah pilih foto
+  File? _imageFile;
   bool _savingPhoto = false;
 
   @override
@@ -44,6 +43,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _saveProfile() async {
     if (_user == null) return;
+
     setState(() => _saving = true);
 
     await _auth.updateProfile(
@@ -68,8 +68,6 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
-  // ==== FOTO PROFIL ====
-
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(
@@ -78,6 +76,7 @@ class _ProfilePageState extends State<ProfilePage> {
         maxWidth: 1600,
         maxHeight: 1600,
       );
+
       if (picked == null) return;
 
       setState(() {
@@ -85,8 +84,8 @@ class _ProfilePageState extends State<ProfilePage> {
         _savingPhoto = true;
       });
 
-      // Simpan ke DB via AuthService (path lokal)
       final u = _user ?? await _auth.getCurrentUser();
+
       if (u != null) {
         await _auth.updateProfile(
           userId: u['user_id'] ?? u['id'].toString(),
@@ -96,9 +95,11 @@ class _ProfilePageState extends State<ProfilePage> {
           email: _emailC.text.trim().isEmpty
               ? (u['email'] ?? '')
               : _emailC.text.trim(),
-          photo: picked.path, // << simpan path foto
+          photo: picked.path,
         );
+
         await _loadUser();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Foto profil diperbarui 📸')),
@@ -106,47 +107,50 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal mengambil foto: $e')));
     } finally {
-      if (mounted) setState(() => _savingPhoto = false);
+      setState(() => _savingPhoto = false);
     }
   }
 
   void _showPhotoPickerSheet() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
+                  width: 45,
+                  height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
+
                 Text(
                   "Pilih Foto Profil",
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    color: Colors.green.shade900,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 15),
+
                 ListTile(
-                  leading: const Icon(Icons.camera_alt, color: kPrimaryColor),
+                  leading: const Icon(Icons.camera_alt, color: Colors.green),
                   title: Text(
                     "Ambil dari Kamera",
                     style: GoogleFonts.poppins(),
@@ -157,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo, color: kPrimaryColor),
+                  leading: const Icon(Icons.photo, color: Colors.green),
                   title: Text(
                     "Pilih dari Galeri",
                     style: GoogleFonts.poppins(),
@@ -175,90 +179,112 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 🌼 UI
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: kPrimaryColor)),
+        body: Center(child: CircularProgressIndicator(color: Colors.green)),
       );
     }
 
     final user = _user ?? {};
     final name = user['name'] ?? 'Matcha Lover';
     final email = user['email'] ?? '-';
-    final photoPath = (user['photo'] ?? '') as String;
+    final photoPath = user['photo'] ?? "";
 
     ImageProvider avatarProvider;
+
     if (_imageFile != null) {
       avatarProvider = FileImage(_imageFile!);
     } else if (photoPath.isNotEmpty && File(photoPath).existsSync()) {
       avatarProvider = FileImage(File(photoPath));
     } else {
-      avatarProvider = const AssetImage('assets/images/nelaprofile.png');
+      avatarProvider = const AssetImage('assets/images/default.jpg');
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 0, 4, 230),
+      backgroundColor: const Color(0xFFF7F5F0),
+
       appBar: AppBar(
-        backgroundColor: kPrimaryColor,
-        elevation: 0,
+        backgroundColor: Colors.green.shade900,
+        elevation: 0.5,
         centerTitle: true,
         title: Text(
-          "Profil 🍃",
+          "Profil",
           style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: const Color.fromARGB(255, 255, 255, 255),
+            fontWeight: FontWeight.w600,
           ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 20),
 
-            // ==== FOTO PROFIL INTERAKTIF ====
+        actions: [
+          IconButton(
+            onPressed: _logout,
+            icon: Icon(
+              Icons.logout,
+              color: const Color.fromARGB(255, 253, 253, 253),
+            ),
+            tooltip: "Keluar",
+          ),
+        ],
+      ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+
+            // FOTO PROFIL PREMIUM
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 65,
-                  backgroundColor: Colors.green.shade100,
-                  backgroundImage: avatarProvider,
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.shade200,
+                        blurRadius: 25,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 75,
+                    backgroundImage: avatarProvider,
+                  ),
                 ),
+
                 Positioned(
-                  bottom: 4,
-                  right: 4,
+                  bottom: 6,
+                  right: 6,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(50),
                     onTap: _showPhotoPickerSheet,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: kPrimaryColor,
+                        color: Colors.green.shade600,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color.fromARGB(255, 240, 0, 0),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                            color: Colors.green.shade900.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: _savingPhoto
                           ? const SizedBox(
-                              width: 18,
-                              height: 18,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
                                 color: Colors.white,
+                                strokeWidth: 2,
                               ),
                             )
-                          : const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                          : const Icon(Icons.camera_alt, color: Colors.white),
                     ),
                   ),
                 ),
@@ -266,44 +292,103 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
 
             const SizedBox(height: 18),
+
             Text(
               name,
               style: GoogleFonts.poppins(
-                fontSize: 20,
+                fontSize: 22,
+                color: Colors.green.shade900,
                 fontWeight: FontWeight.w600,
-                color: kPrimaryColor,
               ),
             ),
             Text(
               email,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Colors.grey.shade700,
+                color: Colors.green.shade900.withOpacity(0.6),
               ),
             ),
 
-            const SizedBox(height: 30),
-            _buildTextField(
-              controller: _nameC,
-              label: "Nama Lengkap",
-              icon: Icons.person_outline,
+            const SizedBox(height: 35),
+
+            // CARD PUTIH PRETTY AESTHETIC
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(
+                  0.75,
+                ), // putih tulang transparan
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.green.shade100),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.shade200.withOpacity(0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildTextField(
+                    controller: _nameC,
+                    label: "Nama Lengkap",
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 18),
+                  _buildTextField(
+                    controller: _emailC,
+                    label: "Email",
+                    icon: Icons.email_outlined,
+                  ),
+                  const SizedBox(height: 28),
+                  _buildSaveButton(),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _emailC,
-              label: "Email",
-              icon: Icons.email_outlined,
+
+            const SizedBox(height: 40),
+
+            // CREDIT SECTION
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade100),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Dibuat oleh:",
+                    style: GoogleFonts.poppins(
+                      color: Colors.green.shade900.withOpacity(0.7),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "• Amanda Neyla Rusy Diyana – 124230044\n"
+                    "• Lulu Mustafiyah – 124230040",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: Colors.green.shade900,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 30),
-            _buildSaveButton(),
-            const SizedBox(height: 14),
-            _buildLogoutButton(),
+
+            const SizedBox(height: 25),
           ],
         ),
       ),
     );
   }
 
+  // ================= TEXTFIELD PREMIUM =================
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -311,70 +396,52 @@ class _ProfilePageState extends State<ProfilePage> {
   }) {
     return TextField(
       controller: controller,
-      style: GoogleFonts.poppins(fontSize: 14),
+      style: GoogleFonts.poppins(
+        color: Colors.green.shade900,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.poppins(color: kTextColor, fontSize: 14),
-        prefixIcon: Icon(icon, color: kPrimaryColor),
+        labelStyle: GoogleFonts.poppins(color: Colors.green.shade800),
+        prefixIcon: Icon(icon, color: Colors.green.shade700),
         filled: true,
-        fillColor: const Color.fromARGB(255, 255, 0, 0),
+        fillColor: Colors.white.withOpacity(0.9),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: Colors.green.shade100),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: kPrimaryColor, width: 1),
+          borderSide: BorderSide(color: Colors.green.shade700, width: 1),
         ),
       ),
     );
   }
 
+  // ================= BUTTON SIMPAN =================
   Widget _buildSaveButton() {
     return ElevatedButton.icon(
       onPressed: _saving ? null : _saveProfile,
       style: ElevatedButton.styleFrom(
-        backgroundColor: kPrimaryColor,
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        shadowColor: Colors.green.shade200,
         elevation: 3,
       ),
       icon: _saving
           ? const SizedBox(
-              width: 18,
-              height: 18,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(
-                color: Colors.white,
                 strokeWidth: 2,
+                color: Colors.white,
               ),
             )
-          : const Icon(Icons.save_alt, color: Colors.white),
+          : const Icon(Icons.save_alt),
       label: Text(
-        _saving ? "Menyimpan..." : "Simpan Perubahan 🍵",
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return ElevatedButton.icon(
-      onPressed: _logout,
-      icon: const Icon(Icons.logout, color: Colors.white),
-      label: Text(
-        "Keluar",
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red.shade400,
-        minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        _saving ? "Menyimpan..." : "Simpan Perubahan 🍃",
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       ),
     );
   }

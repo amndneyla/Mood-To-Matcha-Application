@@ -4,9 +4,7 @@ import '../utils/constants.dart';
 import '../views/home_page.dart';
 import '../views/journal_page.dart';
 import '../views/profile_page.dart';
-import '../views/feedback_page.dart';
-import '../views/login_page.dart';
-import '../services/auth_service.dart';
+import '../views/order_history_page.dart';
 
 class BottomNavbar extends StatefulWidget {
   const BottomNavbar({super.key});
@@ -21,19 +19,9 @@ class _BottomNavbarState extends State<BottomNavbar> {
   final List<Widget> _pages = const [
     HomePage(),
     JournalPage(),
+    OrderHistoryPage(),
     ProfilePage(),
-    FeedbackPage(),
   ];
-
-  /// Fungsi logout langsung ke login page
-  void _logout() {
-    AuthService.instance.logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +34,7 @@ class _BottomNavbarState extends State<BottomNavbar> {
         child: BottomNavigationBar(
           currentIndex: _index,
           onTap: (i) {
-            if (i == 4) {
-              _logout(); // logout langsung
-            } else {
-              setState(() => _index = i);
-            }
+            setState(() => _index = i);
           },
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
@@ -74,16 +58,12 @@ class _BottomNavbarState extends State<BottomNavbar> {
               label: "Journal",
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long),
+              label: "History",
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.person_rounded),
               label: "Profil",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              label: "Kesan",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.logout_rounded, color: Colors.redAccent),
-              label: "Logout",
             ),
           ],
         ),

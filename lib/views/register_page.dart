@@ -78,48 +78,51 @@ class _RegisterPageState extends State<RegisterPage> {
         backgroundColor: kPrimaryColor,
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _field(_id, 'ID Pengguna', Icons.badge),
-              _field(_name, 'Nama Lengkap', Icons.person),
-              _field(_email, 'Email', Icons.email),
-              _field(_password, 'Password', Icons.lock, obscure: true),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _loading ? null : _register,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  minimumSize: const Size.fromHeight(45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+      body: SingleChildScrollView(
+        //ubah bagian body ini biar ga overflow
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _field(_id, 'ID Pengguna', Icons.badge),
+                _field(_name, 'Nama Lengkap', Icons.person),
+                _field(_email, 'Email', Icons.email),
+                _field(_password, 'Password', Icons.lock, obscure: true),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _loading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    minimumSize: const Size.fromHeight(45),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: _loading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Daftar Sekarang',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  ),
+                  child: Text(
+                    'Sudah punya akun? Login',
+                    style: GoogleFonts.poppins(color: kPrimaryColor),
                   ),
                 ),
-                child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        'Daftar Sekarang',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                ),
-                child: Text(
-                  'Sudah punya akun? Login',
-                  style: GoogleFonts.poppins(color: kPrimaryColor),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

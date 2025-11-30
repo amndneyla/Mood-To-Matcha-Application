@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/drink_model.dart';
-import '../services/reward_service.dart';
 import '../services/db_service.dart';
 import '../services/notification_service.dart';
 import '../utils/global_currency.dart';
@@ -41,7 +40,7 @@ class _DetailPageState extends State<DetailPage> {
     if (_balance < priceIdr) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Saldo kamu tidak cukup 🥺"),
+          content: Text("Saldo kamu tidak cukup "),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -50,26 +49,51 @@ class _DetailPageState extends State<DetailPage> {
 
     setState(() => _isBuying = true);
 
-    await RewardService.onBuyMatcha(priceIdr);
-    await _loadUser();
+    try {
+      await DBService.instance.addOrder(
+        widget.drink,
+        priceIdr.toInt(),
+        "IDR",
+        lat: widget.drink.lat,
+        long: widget.drink.long,
+      );
 
-    if (!mounted) return;
-    setState(() => _isBuying = false);
+      await _loadUser();
 
-    await NotificationService().showMatchaNotification(widget.drink.name);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Pesanan kamu sedang disiapkan 🍵 (+5 poin)",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+      await NotificationService().showMatchaNotification(widget.drink.name);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Pesanan berhasil! (+5 poin)",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          ),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
 
-    Navigator.pop(context, true);
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString(),
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isBuying = false);
+      }
+    }
   }
 
   @override
@@ -108,7 +132,6 @@ class _DetailPageState extends State<DetailPage> {
               ),
             ),
             const SizedBox(height: 20),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -142,9 +165,7 @@ class _DetailPageState extends State<DetailPage> {
                 _infoChip(Icons.health_and_safety, d.health),
               ],
             ),
-
             const SizedBox(height: 20),
-
             Text(
               "Deskripsi",
               style: GoogleFonts.poppins(
@@ -164,7 +185,6 @@ class _DetailPageState extends State<DetailPage> {
               ),
             ),
             const SizedBox(height: 30),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -197,7 +217,6 @@ class _DetailPageState extends State<DetailPage> {
               ),
             ),
             const SizedBox(height: 20),
-
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
