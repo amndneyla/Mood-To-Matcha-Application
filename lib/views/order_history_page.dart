@@ -15,6 +15,7 @@ class OrderHistoryPage extends StatefulWidget {
 }
 
 class _OrderHistoryPageState extends State<OrderHistoryPage> {
+  List<OrderHistory> _allOrders = [];
   List<OrderHistory> _orders = [];
   bool _loading = true;
   String _selectedFilter = "Semua";
@@ -28,10 +29,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _loadOrders() async {
     setState(() => _loading = true);
     final data = await DBService.instance.getOrders();
-    final orderList = data.map((e) => OrderHistory.fromMap(e)).toList();
 
     setState(() {
-      _orders = _filterOrders(orderList);
+      _allOrders = data.map((e) => OrderHistory.fromMap(e)).toList();
+      _orders = _filterOrders(_allOrders);
       _loading = false;
     });
   }
@@ -41,19 +42,28 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
     switch (_selectedFilter) {
       case "Hari Ini":
+        final startOfDay = DateTime(now.year, now.month, now.day);
+        final endOfDay = startOfDay.add(const Duration(days: 1));
         return orders.where((o) {
-          return o.date.year == now.year &&
-              o.date.month == now.month &&
-              o.date.day == now.day;
+          return !o.date.isBefore(startOfDay) && o.date.isBefore(endOfDay);
         }).toList();
 
       case "Minggu Ini":
-        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        return orders.where((o) => o.date.isAfter(startOfWeek)).toList();
+        final startOfWeek = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 7));
+        return orders.where((o) {
+          return !o.date.isBefore(startOfWeek) && o.date.isBefore(endOfWeek);
+        }).toList();
 
       case "Bulan Ini":
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final endOfMonth = DateTime(now.year, now.month + 1, 1);
         return orders.where((o) {
-          return o.date.year == now.year && o.date.month == now.month;
+          return !o.date.isBefore(startOfMonth) && o.date.isBefore(endOfMonth);
         }).toList();
 
       default:
@@ -174,9 +184,11 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           final selected = _selectedFilter == filter;
 
           return GestureDetector(
-            onTap: () async {
-              setState(() => _selectedFilter = filter);
-              await _loadOrders();
+            onTap: () {
+              setState(() {
+                _selectedFilter = filter;
+                _orders = _filterOrders(_allOrders);
+              });
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -230,7 +242,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       ),
       child: Row(
         children: [
-          // ✅ FOTO PRODUK
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: order.imageUrl != null && order.imageUrl!.isNotEmpty
@@ -322,14 +333,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         ),
                       ),
                     ),
-                    if (order.lat != null && order.long != null) ...[
-                      const SizedBox(width: 6),
-                      const Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: kSubtitleColor,
-                      ),
-                    ],
                   ],
                 ),
               ],

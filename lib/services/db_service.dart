@@ -109,7 +109,6 @@ class DBService {
       } catch (_) {}
     }
 
-    // ✅ ADDED: Migration untuk versi 11 - Tambah user_id ke tabel
     if (oldV < 11) {
       try {
         await db.execute('ALTER TABLE orders ADD COLUMN user_id TEXT');
@@ -119,7 +118,6 @@ class DBService {
         await db.execute('ALTER TABLE journals ADD COLUMN user_id TEXT');
       } catch (_) {}
 
-      // Assign data lama ke user default (0000)
       await db.update('orders', {'user_id': '0000'});
       await db.update('journals', {'user_id': '0000'});
     }
@@ -212,12 +210,10 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Ambil data user yang sedang login
   Future<Map<String, dynamic>> getUserStats() async {
     final user = await getLoggedInUser();
 
     if (user == null) {
-      // Jika tidak ada user login, return data default
       return {
         'name': 'Matcha Lover',
         'points': 0,
@@ -229,7 +225,6 @@ class DBService {
     return user;
   }
 
-  // ✅ UPDATED: Tambah poin untuk user yang login
   Future<void> addPoints(int points) async {
     final db = await database;
     final user = await getLoggedInUser();
@@ -246,7 +241,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Tambah balance untuk user yang login
   Future<void> addBalance(int amount) async {
     final db = await database;
     final user = await getLoggedInUser();
@@ -261,7 +255,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Kurangi balance untuk user yang login
   Future<void> deductBalance(int amount) async {
     final db = await database;
     final user = await getLoggedInUser();
@@ -276,7 +269,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Reset poin untuk user yang login
   Future<void> resetPoints() async {
     final db = await database;
     final user = await getLoggedInUser();
@@ -293,7 +285,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Konversi poin ke balance untuk user yang login
   Future<void> convertPointsToBalance() async {
     final user = await getLoggedInUser();
 
@@ -316,7 +307,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Update stats untuk user yang login
   Future<void> updateUserStats({double? balance, int? points}) async {
     final db = await database;
     final user = await getLoggedInUser();
@@ -335,7 +325,6 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Simpan order dengan user_id
   Future<void> addOrder(
     Drink drink,
     int price,
@@ -345,7 +334,6 @@ class DBService {
   }) async {
     final db = await database;
 
-    // Dapatkan user yang sedang login
     final user = await getLoggedInUser();
     if (user == null) {
       throw Exception('User tidak ditemukan. Silakan login ulang.');
@@ -358,7 +346,6 @@ class DBService {
       throw Exception('Saldo tidak cukup untuk membeli matcha ini.');
     }
 
-    // Simpan order dengan user_id
     await db.insert('orders', {
       'drink_name': drink.name,
       'price': price,
@@ -374,11 +361,9 @@ class DBService {
     await deductBalance(price);
   }
 
-  // ✅ UPDATED: Ambil order milik user yang login
   Future<List<Map<String, dynamic>>> getOrders() async {
     final db = await database;
 
-    // Filter berdasarkan user yang login
     final user = await getLoggedInUser();
     if (user == null) return [];
 
@@ -392,11 +377,9 @@ class DBService {
     );
   }
 
-  // ✅ UPDATED: Simpan journal dengan user_id
   Future<int> addJournal(JournalEntry j) async {
     final db = await database;
 
-    // Dapatkan user yang sedang login
     final user = await getLoggedInUser();
     if (user == null) {
       throw Exception('User tidak ditemukan. Silakan login ulang.');
@@ -429,18 +412,15 @@ class DBService {
       'user_id': userId,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
-    // Tambah poin saat membuat journal
     await addPoints(10);
 
     print("✅ Berhasil simpan jurnal dengan ID: $id");
     return id;
   }
 
-  // ✅ UPDATED: Ambil semua journal milik user yang login
   Future<List<JournalEntry>> getAllJournals() async {
     final db = await database;
 
-    // Filter berdasarkan user yang login
     final user = await getLoggedInUser();
     if (user == null) return [];
 
@@ -456,11 +436,9 @@ class DBService {
     return result.map((e) => JournalEntry.fromMap(e)).toList();
   }
 
-  // ✅ UPDATED: Ambil journal by date milik user yang login
   Future<List<JournalEntry>> getJournalsByDate(DateTime dayLocal) async {
     final db = await database;
 
-    // Filter berdasarkan user yang login
     final user = await getLoggedInUser();
     if (user == null) return [];
 

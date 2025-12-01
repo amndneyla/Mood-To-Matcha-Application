@@ -38,7 +38,7 @@ class OrderHistory {
       currency: map["currency"] ?? "IDR",
       lat: map["lat"] != null ? (map["lat"] as num).toDouble() : null,
       long: map["long"] != null ? (map["long"] as num).toDouble() : null,
-      date: DateTime.parse(map["date"]),
+      date: DateTime.parse(map['date']).toLocal(),
       imageUrl: map["image_url"],
     );
   }

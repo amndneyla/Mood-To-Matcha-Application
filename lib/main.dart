@@ -7,18 +7,14 @@ import 'services/db_service.dart';
 import 'services/auth_service.dart';
 import 'views/login_page.dart';
 import 'views/order_history_page.dart';
-import 'views/onboarding_page.dart'; //ini
-import 'package:get_storage/get_storage.dart'; //ini
+import 'views/onboarding_page.dart';
+import 'package:get_storage/get_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await GetStorage.init(); //buat onboarding
-  final box = GetStorage(); //ini
-  // box.write(
-  //   'seenOnboarding',
-  //   false,
-  // ); //test onboard, kalo dihapus onboard gabisa ditampilin karena udh pernah. kalo mau cek session ini dihapus dulu
+  await GetStorage.init();
+  final box = GetStorage();
 
   await NotificationService().init();
   await DBService.instance.database;
@@ -26,24 +22,21 @@ void main() async {
   final auth = AuthService.instance;
   final autoLogin = await auth.tryAutoLogin();
 
-  final seenOnboarding = box.read('seenOnboarding') ?? false; //ini
+  final seenOnboarding = box.read('seenOnboarding') ?? false;
 
   runApp(
-    MoodToMatchaApp(
-      startAtHome: autoLogin,
-      showOnboarding: !seenOnboarding,
-    ), //ini
+    MoodToMatchaApp(startAtHome: autoLogin, showOnboarding: !seenOnboarding),
   );
 }
 
 class MoodToMatchaApp extends StatelessWidget {
   final bool startAtHome;
-  final bool showOnboarding; //ini
+  final bool showOnboarding;
 
   const MoodToMatchaApp({
     super.key,
     required this.startAtHome,
-    required this.showOnboarding, //ini
+    required this.showOnboarding,
   });
 
   @override
@@ -71,7 +64,6 @@ class MoodToMatchaApp extends StatelessWidget {
         ),
       ),
 
-      // ini
       routes: {
         '/login': (_) => const LoginPage(),
         '/home': (_) => const BottomNavbar(),
@@ -79,7 +71,7 @@ class MoodToMatchaApp extends StatelessWidget {
       },
 
       home: showOnboarding
-          ? OnboardingScreen() //ini
+          ? OnboardingScreen()
           : (startAtHome ? const BottomNavbar() : const LoginPage()),
     );
   }

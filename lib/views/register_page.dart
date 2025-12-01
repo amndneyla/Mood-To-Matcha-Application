@@ -27,7 +27,6 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _loading = true);
 
     try {
-      // ✅ FIX nama variabel sesuai dengan controller yang ada
       final success = await DBService.instance.registerUser(
         _id.text.trim(),
         _name.text.trim(),
@@ -79,7 +78,6 @@ class _RegisterPageState extends State<RegisterPage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        //ubah bagian body ini biar ga overflow
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Form(
